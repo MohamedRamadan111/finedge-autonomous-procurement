@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  db:
+    image: ankane/pgvector:v0.5.1
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: finedge
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql+psycopg://admin:password@db:5432/finedge
+      # Adding fallback for local PG run testing
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
+    volumes:
+      - ./app:/workspace/app
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
