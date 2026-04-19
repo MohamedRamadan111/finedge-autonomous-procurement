@@ -33,6 +33,17 @@ Built entirely against Senior AI Engineering principles, the system inherently g
    - **Vendor Node:** Predictively simulates market push-back, enforcing operational minimums and penalty rejections.
    - **Zero-Hallucination Auditor:** A determinism-enforcer node executing hard validation against strict `Pydantic` JSON schemas, rejecting any negotiated payload violating compliance logic prior to database commit.
 
+```mermaid
+graph TD
+    A([Start Request]) -->|Thread ID Injection & Checkpointing| B(Buyer Node)
+    B --> C(Vendor Node)
+    C --> D{Auditor Guardrail}
+    D -->|Violation / Budget Exceeded| E[Loop Manager / Increment Round]
+    E --> B
+    D -->|Contract Approved| F([End / Success])
+    D -->|Max Iterations Limit| F
+```
+
 2. **Durability via Postgres Checkpointing:**
    Conversational DAG states are durably serialized to PostgreSQL (`AsyncPostgresSaver`). Node failures, container preemptions, or horizontal scaling operations will not cause `Thread_ID` context destruction, ensuring native resume-capability and Human-in-the-loop (HITL) readiness.
 
