@@ -11,73 +11,98 @@
   </p>
 </div>
 
-## Executive Summary
+## Systems Architecture Overview
 
-**FinEdge Autonomous Procurement** is a production-ready, highly resilient Agentic AI system engineered to automate complex B2B negotiations. Moving beyond elementary heuristic chat interfaces, this architecture implements an advanced **Multi-Agent Swarm** utilizing state machines, asynchronous event loops, and LLM-driven structured orchestration to negotiate, counter-offer, and rigidly audit supply-chain contracts autonomously.
+**FinEdge** is a production-hardened, event-driven Agentic AI platform designed to automate high-stakes B2B supply-chain negotiations. Bypassing traditional heuristic state machines, this architecture introduces a robust **Multi-Agent Directed Acyclic Graph (DAG)**. It orchestrates decentralized LLM-driven personas (A2A protocols) to negotiate pricing, optimize delivery vectors, and enforce zero-trust compliance auditing.
 
-Architected according to **Senior AI Engineering standards**, this project enforces strict separation of state from business logic, robust dependency injection, deterministic guardrails, and full-stack observability.
+Built entirely against Senior AI Engineering principles, the system inherently guarantees continuous state persistence, deterministic output schemas, and strict I/O boundary isolation for high-throughput enterprise deployments.
 
-## Technology Stack
+### Infrastructure & Technology Stack
 
-*   <img src="https://skillicons.dev/icons?i=python" height="20" alt="Python" align="center"/> **Python 3.11** - Core language execution.
-*   <img src="https://skillicons.dev/icons?i=fastapi" height="20" alt="FastAPI" align="center"/> **FastAPI** - Truly asynchronous, non-blocking API Gateway.
-*   <img src="https://img.shields.io/badge/LangGraph-AI-orange?style=flat-square&logo=openai" height="20" alt="LangGraph" align="center"/> **LangGraph & LangChain** - Directed Acyclic Graph (DAG) for stateful multi-agent orchestration.
-*   <img src="https://img.shields.io/badge/LangSmith-Tracing-black?style=flat-square" height="20" alt="LangSmith" align="center"/> **LangSmith** - Complete telemetry, latency tracking, and prompt observability.
-*   <img src="https://skillicons.dev/icons?i=postgres" height="20" alt="PostgreSQL" align="center"/> **PostgreSQL (pgvector)** - Serving dual purposes as both a Persistent Checkpointer and a Vector Database for Advanced RAG.
-*   <img src="https://skillicons.dev/icons?i=docker" height="20" alt="Docker" align="center"/> **Docker & Codespaces** - Fully containerized deployment with immediate remote development `devcontainer` isolation.
+*   <img src="https://skillicons.dev/icons?i=python" height="20" alt="Python" align="center"/> **Core Runtime:** Python 3.11 optimizing asynchronous I/O overhead.
+*   <img src="https://skillicons.dev/icons?i=fastapi" height="20" alt="FastAPI" align="center"/> **API Gateway:** FastAPI delivering a unified, non-blocking ASGI interface.
+*   <img src="https://img.shields.io/badge/LangGraph-AI-orange?style=flat-square&logo=openai" height="20" alt="LangGraph" align="center"/> **Agent Orchestration:** LangGraph & LangChain governing complex state mutations across LLM nodes.
+*   <img src="https://skillicons.dev/icons?i=postgres" height="20" alt="PostgreSQL" align="center"/> **State & Vector Storage:** PostgreSQL with `pgvector` extension; deployed simultaneously for distributed LangGraph checkpointing and exact/semantic hybrid dense retrieval.
+*   <img src="https://img.shields.io/badge/LangSmith-Tracing-black?style=flat-square" height="20" alt="LangSmith" align="center"/> **Telemetry:** LangSmith enabling full-stack APM observability, latency tracking, and autonomous trace debugging.
+*   <img src="https://skillicons.dev/icons?i=docker" height="20" alt="Docker" align="center"/> **Containerization:** Docker & Compose for deterministic local parity and scalable CD artifact shipping.
 
-## Core Agentic Architecture
+## Core Architectural Patterns
 
-The negotiation lifecycle is dictated by an asynchronous State Machine traversing three distinct AI personas:
+1. **A2A (Agent-to-Agent) Orchestration:**
+   - **Buyer Node:** Evaluates budgetary vectors against dynamic constraints to formulate aggressive baseline counter-offers.
+   - **Vendor Node:** Predictively simulates market push-back, enforcing operational minimums and penalty rejections.
+   - **Zero-Hallucination Auditor:** A determinism-enforcer node executing hard validation against strict `Pydantic` JSON schemas, rejecting any negotiated payload violating compliance logic prior to database commit.
 
-1. **The Buyer Agent:** Evaluates raw material requirements and current budget targets against the vendor's propositions. Generates aggressive counter-offers while adhering strictly to maximum thresholds.
-2. **The Vendor Agent:** Simulates an external supplier, pushing back on lowball offers, referencing market constraints dynamically, and refusing specific penalty clauses.
-3. **The Zero-Hallucination Auditor:** An objective, determinism-focused LLGuardrail node. It parses the final negotiated JSON object, rejecting any payload that violates internal compliance boundaries.
+2. **Durability via Postgres Checkpointing:**
+   Conversational DAG states are durably serialized to PostgreSQL (`AsyncPostgresSaver`). Node failures, container preemptions, or horizontal scaling operations will not cause `Thread_ID` context destruction, ensuring native resume-capability and Human-in-the-loop (HITL) readiness.
 
-```mermaid
-graph TD
-    A([Start Request]) -->|Thread ID Injection| B(Buyer Node)
-    B --> C(Vendor Node)
-    C --> D{Auditor Guardrail}
-    D -->|Violation / Budget Exceeded| E[Loop Manager / Increment Round]
-    E --> B
-    D -->|Contract Approved| F([End / Success])
-    D -->|Max Iterations Limit| F
+3. **Fault-Tolerant Network Logic:**
+   All volatile external integrations (e.g., LLM inferences) are encapsulated within `Tenacity` wrappers enforcing exponential backoff and absolute jitter strategies. Upstream API rate limits trigger graceful topological halts rather than localized container panics.
+
+## Local Development Cluster Setup
+
+The repository is structured to provide immediate operational parity with production environments. Follow these protocols to bootstrap the local cluster architecture.
+
+### Prerequisites
+- **Docker Engine** (v24.0+) & Docker Compose (v2.20+)
+- **Git**
+
+### Cluster Initialization
+
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/MohamedRamadan111/finedge-autonomous-procurement.git
+   cd finedge-autonomous-procurement
+   ```
+
+2. **Configure Environment Secrets:**
+   Create the primary `.env` file to inject runtime keys natively into the containers.
+   ```bash
+   # Touch or create the .env file
+   nano .env
+   ```
+   **Required Configuration State:**
+   ```env
+   OPENAI_API_KEY=sk-...                     # Core LLM Inference Provider
+   LANGCHAIN_TRACING_V2=true                 # Trigger APM Telemetry 
+   LANGCHAIN_API_KEY=ls__...                 # Observability Auth
+   LANGCHAIN_PROJECT=finedge-a2a-engine      # Trace Project Name
+   DATABASE_URL=postgresql+psycopg://admin:password@db:5432/finedge # Internal DB Pool Router
+   MAX_NEGOTIATION_ROUNDS=3
+   ```
+
+3. **Bootstrap the Infrastructure:**
+   Deploy the PostgreSQL/pgvector node alongside the ASGI worker containers in detached execution mode.
+   ```bash
+   docker-compose up --build -d
+   ```
+
+4. **Verify Telemetry & Container Health:**
+   Ensure dependency resolution and database pooling succeeded implicitly without startup deadlocks.
+   ```bash
+   docker-compose logs -f api
+   ```
+   The service listener will dynamically bind to `http://localhost:8000`.
+
+### Executing E2E Negotiation Tests
+
+Interface directly with the Swagger OpenAPI schema (`http://localhost:8000/docs`) to trigger the state machine manually.
+
+**Target Execution (POST `/api/v1/negotiate`):**
+```json
+{
+  "requirement": {
+    "product_name": "NVIDIA H100 GPU Cluster",
+    "target_quantity": 50,
+    "max_budget_per_unit": 32000.0,
+    "technical_specs": "Enterprise Data Center 80GB VRAM Configuration"
+  }
+}
 ```
+**Verification Check:** Retain the returned `thread_id` UUID payload. Verify the multi-agent checkpoint logic by issuing a `GET /api/v1/negotiate/{thread_id}` explicitly to confirm persistent database traversal isolation.
 
-## Production-Grade Implementations
-
-- **True State Persistence (Checkpointing):** Utilizing `AsyncPostgresSaver`, conversational states (`NegotiationState`) are durably committed to PostgreSQL. Transient container failures or long-running asynchronous tasks will not compromise the `Thread_ID` memory context.
-- **Fail-Fast & Resilience:** LLM invocations are isolated using `Tenacity` with exponential backoff. Network instability or API rate limits trigger graceful degradation (500 Status with explicit tracing) rather than worker crashes.
-- **Structured A2A Protocol:** Agents communicate exclusively via `pydantic` JSON Schemas (`price_per_unit`, `delivery_days`, `penalties`), guaranteeing reliable downstream pipeline ingestion and zero parsing errors.
-- **Telemetry & Tracing (LangSmith):** Deep integration with **LangSmith** via `@traceable` decorators exposes granular metadata. Every prompt, token boundary, and latency metric across the DAG is captured for CI/CD evaluation and regression testing.
-
-## Getting Started
-
-### 1. Launch via GitHub Codespaces
-The fastest trajectory for evaluating the Agentic flow. The repository ships with a compiled `.devcontainer`.
-1. Initialize a new session in GitHub Codespaces.
-2. The environment automatically orchestrates PostgreSQL, pgvector, and the Python backend.
-3. Establish a `.env` configuration in the root directory:
-```env
-OPENAI_API_KEY=sk-...
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=ls__...
-LANGCHAIN_PROJECT=finedge-procurement
-DATABASE_URL=postgresql+psycopg://admin:password@db:5432/finedge
-MAX_NEGOTIATION_ROUNDS=3
-```
-4. Execute the API layer:
+### Cluster Teardown
+To securely halt services, release networking ports, and flush orphaned data volumes:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+docker-compose down -v --remove-orphans
 ```
-
-### 2. Standalone Docker Deployment
-```bash
-# Clone the repository
-git clone https://github.com/YourUsername/finedge-autonomous-procurement.git
-
-# Build and deploy the cluster infrastructure
-docker-compose up --build -d
-```
-Navigate to `http://localhost:8000/docs` to interface with the `/api/v1/negotiate` endpoints via Swagger UI.
